@@ -1,38 +1,53 @@
-const axios = require("axios")
+const axios = require("axios");
 
+async function fetchWeatherData(longitude, latitude, daysAhead, apiKey) {
 
-const weatherTemp = async(lo, la, Rdays, key) => {
-    if(Rdays < 0) {
-            const errMsg = {
-                message: "Date cannot be in the past",
-                error: true
-            }
-            return errMsg
-        }
-
-    if(Rdays > 0 && Rdays <= 7) {
-        const {data} = await axios.get(`https://api.weatherbit.io/v2.0/current?lat=${la}&lon=${lo}&units=M&key=${key}`)
-        console.log("******************************************************");
-        const {weather , temp} = data.data[data.data.length -1];
-        const {description} = weather;
-        const weather_data = {description, temp}
-        console.log(weather_data);
-        console.log("******************************************************");
-        return weather_data
-        
-    }else if (Rdays > 7){
-        const {data} = await axios.get(`https://api.weatherbit.io/v2.0/forecast/daily?lat=${la}&lon=${lo}&units=M&days=${Rdays}&key=${key}`)
-        console.log("******************************************************");
-        const {weather , temp, app_max_temp, app_min_temp} = data.data[data.data.length -1];
-        const {description} = weather;
-        const weather_data = {description, temp, app_max_temp, app_min_temp}
-        console.log("******************************************************");
-        return weather_data
+    if (daysAhead < 0) {
+        return {
+            success: false,
+            message: "Invalid date: Cannot retrieve past weather data.",
+        };
     }
 
+    try {
+        let weatherResponse;
+        let weatherInfo;
+
+        if (daysAhead > 0 && daysAhead <= 7) {
+
+            weatherResponse = await axios.get(
+                `https://api.weatherbit.io/v2.0/current?lat=${latitude}&lon=${longitude}&units=M&key=${apiKey}`
+            );
+            const latestData = weatherResponse.data.data.slice(-1)[0];
+            weatherInfo = {
+                description: latestData.weather.description,
+                temperature: latestData.temp,
+            };
+        } else {
+
+            weatherResponse = await axios.get(
+                `https://api.weatherbit.io/v2.0/forecast/daily?lat=${latitude}&lon=${longitude}&units=M&days=${daysAhead}&key=${apiKey}`
+            );
+            const latestForecast = weatherResponse.data.data.slice(-1)[0];
+            weatherInfo = {
+                description: latestForecast.weather.description,
+                temperature: latestForecast.temp,
+                maxTemperature: latestForecast.app_max_temp,
+                minTemperature: latestForecast.app_min_temp,
+            };
+        }
+
+        return {
+            success: true,
+            data: weatherInfo,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: "Weather data retrieval failed.",
+            errorDetails: error.message,
+        };
+    }
 }
 
-
-module.exports = {
-    weatherTemp
-}
+module.exports = { fetchWeatherData };
